@@ -4,13 +4,15 @@ var socket = io.connect({transports:['polling']});
 var bg1 = document.getElementById('background-stats-1');
 var bg2 = document.getElementById('background-stats-2');
 
-app.controller('statsCtrl', function($scope){
+app.controller('statsCtrl', function($scope) {
+  $scope.option_a = 'Cats';
+  $scope.option_b = 'Dogs';
   $scope.aPercent = 50;
   $scope.bPercent = 50;
 
-  var updateScores = function(){
+  var updateScores = function() {
     socket.on('scores', function (json) {
-       data = JSON.parse(json);
+       var data = JSON.parse(json);
        var a = parseInt(data.a || 0);
        var b = parseInt(data.b || 0);
 
@@ -27,24 +29,23 @@ app.controller('statsCtrl', function($scope){
     });
   };
 
-  var init = function(){
+  var init = function() {
     document.body.style.opacity=1;
     updateScores();
   };
-  socket.on('message',function(data){
+
+  socket.on('message', function(data) {
     init();
   });
 });
 
 function getPercentages(a, b) {
   var result = {};
-
   if (a + b > 0) {
     result.a = Math.round(a / (a + b) * 100);
     result.b = 100 - result.a;
   } else {
     result.a = result.b = 50;
   }
-
   return result;
 }

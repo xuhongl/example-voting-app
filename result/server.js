@@ -1,3 +1,8 @@
+var keys = require('./keys');
+// Syntax: postgres://<username>:<password>@<servername>[:<port>]/<databasename>
+var pgConString = 'postgres://' + keys.pgUser + ':' + keys.pgPassword + '@' + keys.pgHost + ':' + keys.pgPort + '/' + keys.pgDatabase;
+console.log("Using connection string: " + pgConString);
+
 var express = require('express'),
     async = require('async'),
     pg = require('pg'),
@@ -12,19 +17,15 @@ var express = require('express'),
 
 io.set('transports', ['polling']);
 
-var port = process.env.PORT || 4000;
-
 io.sockets.on('connection', function (socket) {
-
   socket.emit('message', { text : 'Welcome!' });
-
   socket.on('subscribe', function (data) {
     socket.join(data.channel);
   });
 });
 
-var pool = new pg.Pool({
-  connectionString: 'postgres://postgres:postgres@db/postgres'
+var pool = new pg.Pool({  
+  connectionString: pgConString
 });
 
 async.retry(
@@ -32,14 +33,14 @@ async.retry(
   function(callback) {
     pool.connect(function(err, client, done) {
       if (err) {
-        console.error("Waiting for db");
+        console.error("Waiting for db: " + err.toString());
       }
       callback(err, client);
     });
   },
   function(err, client) {
     if (err) {
-      return console.error("Giving up");
+      return console.error("Giving up: " + err.toString());
     }
     console.log("Connected to db");
     getVotes(client);
@@ -49,23 +50,23 @@ async.retry(
 function getVotes(client) {
   client.query('SELECT vote, COUNT(id) AS count FROM votes GROUP BY vote', [], function(err, result) {
     if (err) {
-      console.error("Error performing query: " + err);
+      console.error("Error performing query: " + err.toString());
     } else {
       var votes = collectVotesFromResult(result);
       io.sockets.emit("scores", JSON.stringify(votes));
     }
-
     setTimeout(function() {getVotes(client) }, 1000);
   });
 }
 
 function collectVotesFromResult(result) {
   var votes = {a: 0, b: 0};
-
+  var count = 0;
   result.rows.forEach(function (row) {
     votes[row.vote] = parseInt(row.count);
+    count++;
   });
-
+  console.log(count.toString() + " votes processed.");
   return votes;
 }
 
@@ -85,7 +86,7 @@ app.get('/', function (req, res) {
   res.sendFile(path.resolve(__dirname + '/views/index.html'));
 });
 
-server.listen(port, function () {
+server.listen(keys.appPort, function () {
   var port = server.address().port;
   console.log('App running on port ' + port);
 });
