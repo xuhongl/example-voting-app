@@ -4,10 +4,11 @@ import os
 import socket
 import random
 import json
+import logging
 
-option_a = os.getenv('OPTION_A', "Cats")
-option_b = os.getenv('OPTION_B', "Dogs")
-redis_password = os.getenv('REDIS_PASSWORD', "Dogs")
+option_a = os.getenv('ENV_VAR_OPTION_A', 'Cats')
+option_b = os.getenv('ENV_VAR_OPTION_B', 'Dogs')
+redis_password = os.getenv('ENV_VAR_REDIS_PASSWORD', 'redis_password')
 hostname = socket.gethostname()
 
 app = Flask(__name__)
