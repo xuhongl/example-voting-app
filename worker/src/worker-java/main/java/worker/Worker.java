@@ -6,10 +6,22 @@ import java.sql.*;
 import org.json.JSONObject;
 
 class Worker {
-  public static void main(String[] args) {
+  public static void main(String[] args) {    
+    String redisHostname = ((redisHostname = System.getenv("ENV_VAR_REDIS_HOST")) != null) ? redisHostname : "redis";
+    String redisPort = ((redisPort = System.getenv("ENV_VAR_REDIS_PORT")) != null) ? redisPort : "6379";
+    String redisPassword = ((redisPassword = System.getenv("ENV_VAR_REDIS_PASSWORD")) != null) ? redisPassword : "redis_password";    
+    String pgHost = ((pgHost = System.getenv("ENV_VAR_POSTGRES_HOST")) != null) ? pgHost : "db";
+    String pgPort = ((pgPort = System.getenv("ENV_VAR_POSTGRES_PORT")) != null) ? pgPort : "5432";
+    String pgDatabase = ((pgDatabase = System.getenv("ENV_VAR_POSTGRES_DATABASE")) != null) ? pgDatabase : "postgres";
+    String pgUser = ((pgUser = System.getenv("ENV_VAR_POSTGRES_USER")) != null) ? pgUser : "postgres_user";
+    String pgPassword = ((pgPassword = System.getenv("ENV_VAR_POSTGRES_PASSWORD")) != null) ? pgPassword : "postgres_password";
+    // Syntax: jdbc:postgresql://host:port/database
+    String connectionString = "jdbc:postgresql://" + pgHost + ":" + pgPort + "/" + pgDatabase;
+    System.err.println("Using connection string: " + connectionString);
+    
     try {
-      Jedis redis = connectToRedis("redis");
-      Connection dbConn = connectToDB("db");
+      Jedis redis = connectToRedis(redisHostname, redisPassword);
+      Connection dbConn = connectToDB(connectionString, pgUser, pgPassword);
 
       System.err.println("Watching vote queue");
 
@@ -45,8 +57,11 @@ class Worker {
     }
   }
 
-  static Jedis connectToRedis(String host) {
+  // More information about Jedis, constructor and authentication to Redis:
+  // https://tool.oschina.net/uploads/apidocs/jedis-2.1.0/redis/clients/jedis/Jedis.html#Jedis(java.lang.String)
+  static Jedis connectToRedis(String host, String password) {
     Jedis conn = new Jedis(host);
+    conn.auth(password);
 
     while (true) {
       try {
@@ -62,19 +77,18 @@ class Worker {
     return conn;
   }
 
-  static Connection connectToDB(String host) throws SQLException {
+  static Connection connectToDB(String connectionString, String pgUser, String pgPassword) throws SQLException {
     Connection conn = null;
 
     try {
-
-      Class.forName("org.postgresql.Driver");
-      String url = "jdbc:postgresql://" + host + "/postgres";
-
+      Class.forName("org.postgresql.Driver");      
       while (conn == null) {
         try {
-          conn = DriverManager.getConnection(url, "postgres", "postgres");
-        } catch (SQLException e) {
+          // Format: DriverManager.getConnection(url, username, password);
+          conn = DriverManager.getConnection(connectionString, pgUser, pgPassword);
+        } catch (SQLException ex) {
           System.err.println("Waiting for db");
+          System.err.println("Error: " + ex.toString());
           sleep(1000);
         }
       }
